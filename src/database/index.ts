@@ -101,7 +101,8 @@ export const connectAndSyncDB = async (syncForce = false) => {
     await sequelize.authenticate();
     console.log('Database connected successfully.');
 
-    await sequelize.sync({ force: syncForce });
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    await sequelize.sync({ force: syncForce, alter: isDevelopment });
     console.log('Database synchronized.');
   } catch (error) {
     console.error('Database connection or synchronization failed:', error);
