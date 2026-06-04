@@ -35,9 +35,6 @@ const controller = new AuthController();
  *                   - businessName
  *                   - nit
  *                   - dv
- *                   - fiscalRegimen
- *                   - city
- *                   - address
  *                   - phone
  *                 properties:
  *                   businessName:

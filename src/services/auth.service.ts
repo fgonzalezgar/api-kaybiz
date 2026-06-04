@@ -20,9 +20,9 @@ export class AuthService {
     businessName: string;
     nit: string;
     dv: string;
-    fiscalRegimen: string;
-    city: string;
-    address: string;
+    fiscalRegimen?: string;
+    city?: string;
+    address?: string;
     phone: string;
     businessType: 'generic' | 'restaurant' | 'drugstore' | 'supermarket' | 'salon' | 'hardware_store';
   }, adminData: {
@@ -48,9 +48,17 @@ export class AuthService {
     const transaction = await sequelize.transaction();
 
     try {
+      // Assign fallback default values for optional onboarding fields
+      const finalAddress = tenantData.address || 'Calle Principal 123';
+      const finalCity = tenantData.city || 'Bogotá';
+      const finalFiscalRegimen = tenantData.fiscalRegimen || 'Simplificado';
+
       // 1. Create Tenant
       const tenant = await tenantRepository.create({
         ...tenantData,
+        address: finalAddress,
+        city: finalCity,
+        fiscalRegimen: finalFiscalRegimen,
         trialStartDate: now,
         trialEndDate: trialEndDate,
         isTrialActive: true,
@@ -62,8 +70,8 @@ export class AuthService {
         tenantId: tenant.id,
         branchName: 'Sucursal Principal',
         code: '01',
-        address: tenantData.address,
-        city: tenantData.city,
+        address: finalAddress,
+        city: finalCity,
         phone: tenantData.phone,
         isWarehouse: false,
       }, { transaction });

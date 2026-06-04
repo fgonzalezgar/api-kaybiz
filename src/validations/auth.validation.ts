@@ -11,15 +11,9 @@ export const registerSchema = Joi.object({
     dv: Joi.string().max(2).required().messages({
       'any.required': 'dv (verification digit) is required',
     }),
-    fiscalRegimen: Joi.string().required().messages({
-      'any.required': 'fiscalRegimen is required',
-    }),
-    city: Joi.string().required().messages({
-      'any.required': 'city is required',
-    }),
-    address: Joi.string().required().messages({
-      'any.required': 'address is required',
-    }),
+    fiscalRegimen: Joi.string().optional(),
+    city: Joi.string().optional(),
+    address: Joi.string().optional(),
     phone: Joi.string().required().messages({
       'any.required': 'phone is required',
     }),
