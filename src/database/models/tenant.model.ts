@@ -7,6 +7,7 @@ export interface TenantAttributes {
   nit: string;
   dv: string;
   fiscalRegimen: string;
+  department: string;
   city: string;
   address: string;
   phone: string;
@@ -31,6 +32,7 @@ export class Tenant extends Model<TenantAttributes, TenantCreationAttributes> im
   declare nit: string;
   declare dv: string;
   declare fiscalRegimen: string;
+  declare department: string;
   declare city: string;
   declare address: string;
   declare phone: string;
@@ -71,6 +73,12 @@ Tenant.init(
       type: DataTypes.STRING,
       allowNull: false,
       field: 'fiscal_regimen',
+    },
+    department: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'Cundinamarca',
+      field: 'department',
     },
     city: {
       type: DataTypes.STRING,

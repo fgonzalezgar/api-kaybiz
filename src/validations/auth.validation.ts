@@ -12,6 +12,7 @@ export const registerSchema = Joi.object({
       'any.required': 'dv (verification digit) is required',
     }),
     fiscalRegimen: Joi.string().optional(),
+    department: Joi.string().optional(),
     city: Joi.string().optional(),
     address: Joi.string().optional(),
     phone: Joi.string().required().messages({

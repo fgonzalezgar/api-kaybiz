@@ -21,6 +21,7 @@ export class AuthService {
     nit: string;
     dv: string;
     fiscalRegimen?: string;
+    department?: string;
     city?: string;
     address?: string;
     phone: string;
@@ -51,6 +52,7 @@ export class AuthService {
       // Assign fallback default values for optional onboarding fields
       const finalAddress = tenantData.address || 'Calle Principal 123';
       const finalCity = tenantData.city || 'Bogotá';
+      const finalDepartment = tenantData.department || 'Cundinamarca';
       const finalFiscalRegimen = tenantData.fiscalRegimen || 'Simplificado';
 
       // 1. Create Tenant
@@ -58,6 +60,7 @@ export class AuthService {
         ...tenantData,
         address: finalAddress,
         city: finalCity,
+        department: finalDepartment,
         fiscalRegimen: finalFiscalRegimen,
         trialStartDate: now,
         trialEndDate: trialEndDate,
@@ -72,6 +75,7 @@ export class AuthService {
         code: '01',
         address: finalAddress,
         city: finalCity,
+        department: finalDepartment,
         phone: tenantData.phone,
         isWarehouse: false,
       }, { transaction });

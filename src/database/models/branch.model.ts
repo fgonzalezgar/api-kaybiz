@@ -7,6 +7,7 @@ export interface BranchAttributes {
   branchName: string;
   code: string;
   address: string;
+  department: string;
   city: string;
   phone: string;
   isWarehouse: boolean;
@@ -26,6 +27,7 @@ export class Branch extends Model<BranchAttributes, BranchCreationAttributes> im
   declare branchName: string;
   declare code: string;
   declare address: string;
+  declare department: string;
   declare city: string;
   declare phone: string;
   declare isWarehouse: boolean;
@@ -60,6 +62,12 @@ Branch.init(
       type: DataTypes.STRING,
       allowNull: false,
       field: 'address',
+    },
+    department: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'Cundinamarca',
+      field: 'department',
     },
     city: {
       type: DataTypes.STRING,
