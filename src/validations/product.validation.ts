@@ -42,6 +42,7 @@ export const createProductSchema = Joi.object({
   requiresExpirationControl: Joi.boolean().default(false).optional(),
   batchNumber: Joi.string().max(50).allow(null, '').optional(),
   isRecipePrepared: Joi.boolean().default(false).optional(),
+  isActive: Joi.boolean().default(true).optional(),
 });
 
 export const updateProductSchema = Joi.object({
@@ -66,4 +67,5 @@ export const updateProductSchema = Joi.object({
   requiresExpirationControl: Joi.boolean().optional(),
   batchNumber: Joi.string().max(50).allow(null, '').optional(),
   isRecipePrepared: Joi.boolean().optional(),
+  isActive: Joi.boolean().optional(),
 });

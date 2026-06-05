@@ -1,13 +1,14 @@
 import { Model, DataTypes } from 'sequelize';
 import { sequelize } from '../../config/database';
 
-export type DocumentType = 'NIT' | 'CC' | 'CE' | 'RUT';
+export type DocumentType = 'NIT' | 'CC' | 'CE' | 'RUT' | 'PP';
 
 export interface ThirdPartyAttributes {
   id: string;
   tenantId: string;
   isClient: boolean;
   isProvider: boolean;
+  isEmployee: boolean;
   documentType: DocumentType;
   documentNumber: string;
   verificationDigit: string | null;
@@ -16,8 +17,10 @@ export interface ThirdPartyAttributes {
   lastName: string | null;
   email: string;
   phone: string;
-  address: string;
+  stateDepartment: string;
   city: string;
+  address: string;
+  isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date | null;
@@ -33,6 +36,7 @@ export class ThirdParty extends Model<ThirdPartyAttributes, ThirdPartyCreationAt
   declare tenantId: string;
   declare isClient: boolean;
   declare isProvider: boolean;
+  declare isEmployee: boolean;
   declare documentType: DocumentType;
   declare documentNumber: string;
   declare verificationDigit: string | null;
@@ -41,8 +45,10 @@ export class ThirdParty extends Model<ThirdPartyAttributes, ThirdPartyCreationAt
   declare lastName: string | null;
   declare email: string;
   declare phone: string;
+  declare stateDepartment: string;
   declare address: string;
   declare city: string;
+  declare isActive: boolean;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
   declare readonly deletedAt: Date | null;
@@ -72,8 +78,14 @@ ThirdParty.init(
       allowNull: false,
       field: 'is_provider',
     },
+    isEmployee: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      field: 'is_employee',
+    },
     documentType: {
-      type: DataTypes.ENUM('NIT', 'CC', 'CE', 'RUT'),
+      type: DataTypes.ENUM('NIT', 'CC', 'CE', 'RUT', 'PP'),
       allowNull: false,
       field: 'document_type',
     },
@@ -83,7 +95,7 @@ ThirdParty.init(
       field: 'document_number',
     },
     verificationDigit: {
-      type: DataTypes.STRING(2),
+      type: DataTypes.STRING(1),
       allowNull: true,
       field: 'verification_digit',
     },
@@ -112,15 +124,26 @@ ThirdParty.init(
       allowNull: false,
       field: 'phone',
     },
-    address: {
+    stateDepartment: {
       type: DataTypes.STRING,
       allowNull: false,
-      field: 'address',
+      field: 'state_department',
     },
     city: {
       type: DataTypes.STRING,
       allowNull: false,
       field: 'city',
+    },
+    address: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: 'address',
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+      field: 'is_active',
     },
   },
   {

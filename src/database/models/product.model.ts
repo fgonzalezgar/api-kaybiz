@@ -20,6 +20,7 @@ export interface ProductAttributes {
   requiresExpirationControl?: boolean;
   batchNumber?: string | null;
   isRecipePrepared?: boolean;
+  isActive?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date | null;
@@ -46,6 +47,7 @@ export class Product extends Model<ProductAttributes, ProductCreationAttributes>
   declare requiresExpirationControl: boolean;
   declare batchNumber: string | null;
   declare isRecipePrepared: boolean;
+  declare isActive: boolean;
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
   declare readonly deletedAt: Date | null;
@@ -89,7 +91,7 @@ Product.init(
       field: 'type',
     },
     cost: {
-      type: DataTypes.DECIMAL(12, 2),
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
       get() {
         const rawValue = this.getDataValue('cost');
@@ -98,7 +100,7 @@ Product.init(
       field: 'cost',
     },
     price: {
-      type: DataTypes.DECIMAL(12, 2),
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
       get() {
         const rawValue = this.getDataValue('price');
@@ -140,6 +142,12 @@ Product.init(
       defaultValue: false,
       allowNull: false,
       field: 'is_recipe_prepared',
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+      field: 'is_active',
     },
   },
   {

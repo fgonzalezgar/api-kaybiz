@@ -37,9 +37,12 @@ const controller = new ThirdPartyController();
  *         isProvider:
  *           type: boolean
  *           example: false
+ *         isEmployee:
+ *           type: boolean
+ *           example: false
  *         documentType:
  *           type: string
- *           enum: [NIT, CC, CE, RUT]
+ *           enum: [NIT, CC, CE, RUT, PP]
  *           example: "CC"
  *         documentNumber:
  *           type: string
@@ -68,12 +71,18 @@ const controller = new ThirdPartyController();
  *         phone:
  *           type: string
  *           example: "+573112345678"
- *         address:
+ *         stateDepartment:
  *           type: string
- *           example: "Carrera 7 # 72-10"
+ *           example: "Cundinamarca"
  *         city:
  *           type: string
  *           example: "Bogotá"
+ *         address:
+ *           type: string
+ *           example: "Carrera 7 # 72-10"
+ *         isActive:
+ *           type: boolean
+ *           example: true
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -91,10 +100,39 @@ router.use(authenticate, tenantIsolation);
  * @swagger
  * /third-parties:
  *   get:
- *     summary: Listar todos los terceros (clientes y proveedores) del inquilino autenticado
+ *     summary: Listar todos los terceros (clientes, proveedores, empleados) del inquilino autenticado
  *     tags: [ThirdParties]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [client, provider, employee]
+ *         description: Filtrar por tipo de tercero
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Búsqueda por nombre, razón social o número de documento
+ *       - in: query
+ *         name: include_inactive
+ *         schema:
+ *           type: boolean
+ *         description: Incluir terceros inactivos (por defecto es false)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página para paginación
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Cantidad de registros por página
  *     responses:
  *       200:
  *         description: Lista de terceros obtenida con éxito
@@ -106,6 +144,18 @@ router.use(authenticate, tenantIsolation);
  *                 status:
  *                   type: string
  *                   example: "success"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 limit:
+ *                   type: integer
+ *                   example: 10
  *                 data:
  *                   type: array
  *                   items:
@@ -184,16 +234,20 @@ router.use(checkTrialStatus);
  *                 type: boolean
  *                 default: false
  *                 example: false
+ *               isEmployee:
+ *                 type: boolean
+ *                 default: false
+ *                 example: false
  *               documentType:
  *                 type: string
- *                 enum: [NIT, CC, CE, RUT]
+ *                 enum: [NIT, CC, CE, RUT, PP]
  *                 example: "CC"
  *               documentNumber:
  *                 type: string
  *                 example: "1014996985"
  *               verificationDigit:
  *                 type: string
- *                 maxLength: 2
+ *                 maxLength: 1
  *                 example: null
  *               companyName:
  *                 type: string
@@ -211,12 +265,15 @@ router.use(checkTrialStatus);
  *               phone:
  *                 type: string
  *                 example: "+573112345678"
- *               address:
+ *               stateDepartment:
  *                 type: string
- *                 example: "Carrera 7 # 72-10"
+ *                 example: "Cundinamarca"
  *               city:
  *                 type: string
  *                 example: "Bogotá"
+ *               address:
+ *                 type: string
+ *                 example: "Carrera 7 # 72-10"
  *     responses:
  *       201:
  *         description: Tercero creado con éxito
@@ -266,9 +323,11 @@ router.post('/', validateSchema(createThirdPartySchema), (req, res, next) => con
  *                 type: boolean
  *               isProvider:
  *                 type: boolean
+ *               isEmployee:
+ *                 type: boolean
  *               documentType:
  *                 type: string
- *                 enum: [NIT, CC, CE, RUT]
+ *                 enum: [NIT, CC, CE, RUT, PP]
  *               documentNumber:
  *                 type: string
  *               verificationDigit:
@@ -283,10 +342,14 @@ router.post('/', validateSchema(createThirdPartySchema), (req, res, next) => con
  *                 type: string
  *               phone:
  *                 type: string
- *               address:
+ *               stateDepartment:
  *                 type: string
  *               city:
  *                 type: string
+ *               address:
+ *                 type: string
+ *               isActive:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Tercero actualizado con éxito
@@ -310,6 +373,47 @@ router.post('/', validateSchema(createThirdPartySchema), (req, res, next) => con
  *         description: Tercero no encontrado
  */
 router.put('/:id', validateSchema(updateThirdPartySchema), (req, res, next) => controller.update(req, res, next));
+
+/**
+ * @swagger
+ * /third-parties/{id}/toggle-status:
+ *   patch:
+ *     summary: Cambiar el estado activo/inactivo de un tercero
+ *     tags: [ThirdParties]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID único del tercero
+ *     responses:
+ *       200:
+ *         description: Estado cambiado con éxito
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 message:
+ *                   type: string
+ *                   example: "Third party status toggled successfully. Active: false"
+ *                 data:
+ *                   $ref: '#/components/schemas/ThirdParty'
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Periodo de prueba vencido o permisos insuficientes
+ *       404:
+ *         description: Tercero no encontrado
+ */
+router.patch('/:id/toggle-status', (req, res, next) => controller.toggleStatus(req, res, next));
 
 /**
  * @swagger

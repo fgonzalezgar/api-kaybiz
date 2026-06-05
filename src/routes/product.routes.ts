@@ -77,6 +77,9 @@ const controller = new ProductController();
  *         isRecipePrepared:
  *           type: boolean
  *           example: false
+ *         isActive:
+ *           type: boolean
+ *           example: true
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -97,6 +100,24 @@ router.use(authenticate, tenantIsolation);
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: include_inactive
+ *         schema:
+ *           type: boolean
+ *         description: Incluir productos inactivos (por defecto es false)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página para paginación
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Cantidad de registros por página
  *     responses:
  *       200:
  *         description: Lista de productos obtenida con éxito
@@ -108,6 +129,18 @@ router.use(authenticate, tenantIsolation);
  *                 status:
  *                   type: string
  *                   example: "success"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 limit:
+ *                   type: integer
+ *                   example: 10
  *                 data:
  *                   type: array
  *                   items:
@@ -227,6 +260,10 @@ router.use(checkTrialStatus, requireRoles(['Admin', 'Accountant']));
  *               isRecipePrepared:
  *                 type: boolean
  *                 example: false
+ *               isActive:
+ *                 type: boolean
+ *                 default: true
+ *                 example: true
  *     responses:
  *       201:
  *         description: Producto creado con éxito
@@ -304,6 +341,8 @@ router.post('/', validateSchema(createProductSchema), (req, res, next) => contro
  *                 type: string
  *               isRecipePrepared:
  *                 type: boolean
+ *               isActive:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Producto actualizado con éxito
@@ -327,6 +366,47 @@ router.post('/', validateSchema(createProductSchema), (req, res, next) => contro
  *         description: Producto no encontrado
  */
 router.put('/:id', validateSchema(updateProductSchema), (req, res, next) => controller.update(req, res, next));
+
+/**
+ * @swagger
+ * /products/{id}/toggle-status:
+ *   patch:
+ *     summary: Cambiar el estado activo/inactivo de un producto o servicio
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID único del producto o servicio
+ *     responses:
+ *       200:
+ *         description: Estado cambiado con éxito
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 message:
+ *                   type: string
+ *                   example: "Product active status toggled successfully. Active: false"
+ *                 data:
+ *                   $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Prohibido o periodo de prueba vencido
+ *       404:
+ *         description: Producto no encontrado
+ */
+router.patch('/:id/toggle-status', (req, res, next) => controller.toggleStatus(req, res, next));
 
 /**
  * @swagger

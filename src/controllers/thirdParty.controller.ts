@@ -8,11 +8,23 @@ export class ThirdPartyController {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId!;
-      const list = await thirdPartyService.getAll(tenantId);
+      const { type, search, include_inactive, page, limit } = req.query;
+
+      const result = await thirdPartyService.getAll(tenantId, {
+        type: type as any,
+        search: search as any,
+        include_inactive: include_inactive as any,
+        page: page as any,
+        limit: limit as any,
+      });
+
       return res.status(200).json({
         status: 'success',
-        results: list.length,
-        data: list,
+        results: result.rows.length,
+        total: result.count,
+        page: result.page,
+        limit: result.limit,
+        data: result.rows,
       });
     } catch (error) {
       return next(error);
@@ -57,6 +69,23 @@ export class ThirdPartyController {
       const record = await thirdPartyService.update(tenantId, id, req.body);
       return res.status(200).json({
         status: 'success',
+        data: record,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async toggleStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      if (!id) throw new BadRequestError('ID parameter is required.');
+
+      const record = await thirdPartyService.toggleStatus(tenantId, id);
+      return res.status(200).json({
+        status: 'success',
+        message: `Third party status toggled successfully. Active: ${record.isActive}`,
         data: record,
       });
     } catch (error) {

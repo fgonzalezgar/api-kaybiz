@@ -8,6 +8,7 @@ import { RestaurantTableService } from '../services/restaurantTable.service';
 import { ServiceSpecialistService } from '../services/serviceSpecialist.service';
 import { TenantService } from '../services/tenant.service';
 import jwt from 'jsonwebtoken';
+import { createThirdPartySchema } from '../validations/thirdParty.validation';
 
 const authService = new AuthService();
 const categoryService = new CategoryService();
@@ -135,6 +136,7 @@ async function runVerification() {
   const thirdPartyA = await thirdPartyService.create(mockReqA1.tenantId, {
     isClient: true,
     isProvider: false,
+    isEmployee: false,
     documentType: 'CC',
     documentNumber: '1015666777',
     verificationDigit: null,
@@ -142,10 +144,114 @@ async function runVerification() {
     lastName: 'Perez',
     email: 'juan@gmail.test',
     phone: '3157778899',
+    stateDepartment: 'Cundinamarca',
     address: 'Av 19 #120-10',
     city: 'Bogota',
   });
   console.log(`Third Party client created: ${thirdPartyA.firstName} (${thirdPartyA.documentNumber})`);
+
+  // 5.1 Test Joi Validations for Third Party (NIT conditions, at least one flag, sanitization)
+  console.log('\n[5.1] Testing Third Party Joi schema validations...');
+  
+  // Test: At least one flag is true
+  const invalidRole = createThirdPartySchema.validate({
+    isClient: false,
+    isProvider: false,
+    isEmployee: false,
+    documentType: 'CC',
+    documentNumber: '123456',
+    email: 'test@gmail.com',
+    phone: '3000000000',
+    stateDepartment: 'Cundinamarca',
+    city: 'Bogota',
+    address: 'Calle 123',
+  });
+  if (!invalidRole.error) {
+    throw new Error('Assertion failed: Joi allowed all role flags to be false');
+  }
+  console.log(`- Correctly rejected all-false roles: "${invalidRole.error.message}"`);
+
+  // Test: NIT requires companyName and verificationDigit
+  const missingNITDetails = createThirdPartySchema.validate({
+    isClient: true,
+    documentType: 'NIT',
+    documentNumber: '901234567',
+    email: 'test@gmail.com',
+    phone: '3000000000',
+    stateDepartment: 'Cundinamarca',
+    city: 'Bogota',
+    address: 'Calle 123',
+  });
+  if (!missingNITDetails.error) {
+    throw new Error('Assertion failed: Joi allowed NIT without companyName and verificationDigit');
+  }
+  console.log(`- Correctly rejected NIT without company details: "${missingNITDetails.error.message}"`);
+
+  const badVerificationDigit = createThirdPartySchema.validate({
+    isClient: true,
+    documentType: 'NIT',
+    documentNumber: '901234567',
+    companyName: 'My Company',
+    verificationDigit: '12', // must be a single digit
+    email: 'test@gmail.com',
+    phone: '3000000000',
+    stateDepartment: 'Cundinamarca',
+    city: 'Bogota',
+    address: 'Calle 123',
+  });
+  if (!badVerificationDigit.error) {
+    throw new Error('Assertion failed: Joi allowed NIT with verificationDigit of length 2');
+  }
+  console.log(`- Correctly rejected multi-digit NIT verification digit: "${badVerificationDigit.error.message}"`);
+
+  // Test: Sanitization of names and address
+  const dirtyPayload = {
+    isClient: true,
+    documentType: 'CC',
+    documentNumber: '1015666888',
+    firstName: 'Juan*#% <script>',
+    lastName: 'Pérez!!',
+    email: 'juan@gmail.com',
+    phone: '3157778899',
+    stateDepartment: 'Cundinamarca',
+    city: 'Bogota',
+    address: 'Av 19 #120-10\r\n',
+  };
+  const sanitized = createThirdPartySchema.validate(dirtyPayload);
+  if (sanitized.error) {
+    throw new Error(`Sanitization test failed with validation error: ${sanitized.error.message}`);
+  }
+  console.log(`- Original first name: "${dirtyPayload.firstName}", Sanitized: "${sanitized.value.firstName}"`);
+  console.log(`- Original address: "${JSON.stringify(dirtyPayload.address)}", Sanitized: "${JSON.stringify(sanitized.value.address)}"`);
+  if (sanitized.value.firstName !== 'Juan# script' || sanitized.value.address !== 'Av 19 #120-10') {
+    throw new Error('Assertion failed: Joi sanitization regex is incorrect');
+  }
+
+  // 5.2 Test Status Toggling & Listing for Third Party
+  console.log('\n[5.2] Testing Third Party status toggle and queries...');
+  if (!thirdPartyA.isActive) {
+    throw new Error('Assertion failed: new third party should default to active');
+  }
+  const toggledA = await thirdPartyService.toggleStatus(mockReqA1.tenantId, thirdPartyA.id);
+  console.log(`- Status toggled. New status (isActive): ${toggledA.isActive}`);
+  if (toggledA.isActive !== false) {
+    throw new Error('Assertion failed: third party isActive should be false');
+  }
+
+  const listActive = await thirdPartyService.getAll(mockReqA1.tenantId, { include_inactive: false });
+  console.log(`- Active list count: ${listActive.count}`);
+  if (listActive.rows.some(t => t.id === thirdPartyA.id)) {
+    throw new Error('Assertion failed: inactive third party should not appear in active listings');
+  }
+
+  const listAll = await thirdPartyService.getAll(mockReqA1.tenantId, { include_inactive: true });
+  console.log(`- All list count: ${listAll.count}`);
+  if (!listAll.rows.some(t => t.id === thirdPartyA.id)) {
+    throw new Error('Assertion failed: inactive third party should appear in list with include_inactive');
+  }
+
+  await thirdPartyService.toggleStatus(mockReqA1.tenantId, thirdPartyA.id);
+  console.log('- Status toggled back to active.');
 
   // 6. Test Product upgrades (Sector-Specific Fields)
   console.log('\n[6] Setting up Catalog and creating sector-configured products...');
@@ -211,6 +317,75 @@ async function runVerification() {
   if (!productB.requiresExpirationControl || productB.batchNumber !== 'LOTE-ASP-2026') {
     throw new Error('Assertion failed: expiration control or batch number is incorrect');
   }
+
+  // 6.2 Test Product Expiration and Status Toggle
+  console.log('\n[6.2] Testing Product configuration checks and status toggle...');
+  
+  // Test expiration control batch requirement for drugstore
+  try {
+    await productService.create(mockReqB1.tenantId, {
+      categoryId: categoryB.id,
+      brandId: brandB.id,
+      name: 'Ibuprofeno 400mg',
+      skuBarcode: 'PROD-DRUG-02',
+      type: 'product',
+      cost: 400,
+      price: 1000,
+      taxPercentage: 5,
+      accountingAccountRevenueId: revenueAccB.id,
+      accountingAccountExpenseId: expenseAccB.id,
+      requiresExpirationControl: true, // Requires batch number
+      // batchNumber is missing
+    });
+    throw new Error('Assertion failed: allowed drugstore product with expiration control but missing batchNumber!');
+  } catch (error: any) {
+    console.log(`- Correctly rejected drugstore product missing batchNumber: "${error.message}"`);
+  }
+
+  // Test that non-drugstore/non-supermarket tenant can save expiration controlled product without batch
+  const productAWithExp = await productService.create(mockReqA1.tenantId, {
+    categoryId: categoryA.id,
+    brandId: brandA.id,
+    name: 'Queso Especial Expirable',
+    skuBarcode: 'PROD-RES-02',
+    type: 'product',
+    cost: 5000,
+    price: 9000,
+    taxPercentage: 19,
+    accountingAccountRevenueId: revenueAcc.id,
+    accountingAccountExpenseId: expenseAcc.id,
+    requiresExpirationControl: true,
+    // batchNumber is missing, but allowed because businessType is restaurant (not drugstore/supermarket)
+  });
+  console.log(`- Correctly allowed restaurant product with expiration control but missing batch: ${productAWithExp.name}`);
+
+  // Test Product active status toggle
+  if (!productA.isActive) {
+    throw new Error('Assertion failed: new product should default to active');
+  }
+  const toggledProduct = await productService.toggleStatus(mockReqA1.tenantId, productA.id);
+  console.log(`- Product status toggled. New status (isActive): ${toggledProduct.isActive}`);
+  if (toggledProduct.isActive !== false) {
+    throw new Error('Assertion failed: product isActive should be false');
+  }
+
+  // Query active products
+  const listActiveProducts = await productService.getAll(mockReqA1.tenantId, { include_inactive: false });
+  if (listActiveProducts.rows.some(p => p.id === productA.id)) {
+    throw new Error('Assertion failed: inactive product appeared in active list');
+  }
+  console.log(`- Active products list correctly excludes toggled product.`);
+
+  // Query all products (including inactive)
+  const listAllProducts = await productService.getAll(mockReqA1.tenantId, { include_inactive: true });
+  if (!listAllProducts.rows.some(p => p.id === productA.id)) {
+    throw new Error('Assertion failed: inactive product missing from all list');
+  }
+  console.log(`- All products list correctly includes toggled product.`);
+
+  // Toggle back to active
+  await productService.toggleStatus(mockReqA1.tenantId, productA.id);
+  console.log('- Product status toggled back to active.');
 
   // 7. Test Restaurant Tables CRUD & Isolation
   console.log('\n[7] Testing Restaurant Tables CRUD operations...');
