@@ -14,6 +14,7 @@ const router = Router();
 
 router.use('/auth', authRouter);
 router.use('/third-parties', thirdPartyRouter);
+router.use('/contacts', thirdPartyRouter);
 router.use('/categories', categoryRouter);
 router.use('/brands', brandRouter);
 router.use('/products', productRouter);

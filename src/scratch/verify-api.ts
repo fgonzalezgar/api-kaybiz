@@ -142,7 +142,7 @@ async function runVerification() {
     verificationDigit: null,
     firstName: 'Juan',
     lastName: 'Perez',
-    email: 'juan@gmail.test',
+    email: 'juan@gmail.com',
     phone: '3157778899',
     stateDepartment: 'Cundinamarca',
     address: 'Av 19 #120-10',
@@ -252,6 +252,38 @@ async function runVerification() {
 
   await thirdPartyService.toggleStatus(mockReqA1.tenantId, thirdPartyA.id);
   console.log('- Status toggled back to active.');
+
+  // 5.3 Test Employee Registration & Contact Editing
+  console.log('\n[5.3] Testing Employee Registration (Unified Third Party as employee)...');
+  const employeeA = await thirdPartyService.create(mockReqA1.tenantId, {
+    isClient: false,
+    isProvider: false,
+    isEmployee: true,
+    documentType: 'CC',
+    documentNumber: '1020304050',
+    verificationDigit: null,
+    firstName: 'Maria',
+    lastName: 'Gomez',
+    email: 'maria.gomez@kaybiz.test',
+    phone: '3201112233',
+    stateDepartment: 'Antioquia',
+    address: 'Calle 50 #10-20',
+    city: 'Medellin',
+  });
+  console.log(`Employee Third Party created: ${employeeA.firstName} ${employeeA.lastName} (${employeeA.documentNumber})`);
+  if (!employeeA.isEmployee || employeeA.isClient || employeeA.isProvider) {
+    throw new Error('Assertion failed: employee flags are incorrect');
+  }
+
+  console.log('Editing the employee contact (updating phone and address)...');
+  const updatedEmployee = await thirdPartyService.update(mockReqA1.tenantId, employeeA.id, {
+    phone: '3209998877',
+    address: 'Calle 60 #15-30',
+  });
+  console.log(`Employee updated successfully. New phone: ${updatedEmployee.phone}, New address: ${updatedEmployee.address}`);
+  if (updatedEmployee.phone !== '3209998877' || updatedEmployee.address !== 'Calle 60 #15-30') {
+    throw new Error('Assertion failed: employee update fields do not match');
+  }
 
   // 6. Test Product upgrades (Sector-Specific Fields)
   console.log('\n[6] Setting up Catalog and creating sector-configured products...');
